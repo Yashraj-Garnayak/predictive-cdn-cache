@@ -3,6 +3,7 @@
 Wikipedia language editions stand in for regions:
   de -> Frankfurt, hi -> Mumbai, en -> Virginia
 Each Wikipedia article stands in for a video. Output columns: region,hour,video_id
+Article titles are written alongside: region,video_id,title
 """
 from __future__ import annotations
 import argparse, gzip, logging, urllib.request
@@ -59,19 +60,34 @@ def parse_hour(raw, hour: int) -> pd.DataFrame:
     return df.groupby(["region", "hour", "page"], as_index=False)["views"].sum()
 
 
+def page_ids(g: pd.DataFrame, top_pages: int) -> dict[str, int]:
+    """One region's most-viewed pages -> video ids (alphabetical, so ids are stable)."""
+    keep = g.groupby("page")["views"].sum().nlargest(top_pages).index
+    return {p: i for i, p in enumerate(sorted(keep))}
+
+
 def to_requests(agg: pd.DataFrame, top_pages: int, requests_per_hour: int, seed: int) -> pd.DataFrame:
     """Keep each region's most-viewed pages, map them to ids, sample individual requests."""
     rng = np.random.default_rng(seed)
     out = []
     for region, g in agg.groupby("region"):
-        keep = g.groupby("page")["views"].sum().nlargest(top_pages).index
-        g = g[g["page"].isin(keep)]
-        ids = {p: i for i, p in enumerate(sorted(keep))}
+        ids = page_ids(g, top_pages)
+        g = g[g["page"].isin(ids)]
         for hour, gh in g.groupby("hour"):
             p = gh["views"].to_numpy(float); p /= p.sum()
             vids = rng.choice(gh["page"].map(ids).to_numpy(), requests_per_hour, p=p)
             out.append(pd.DataFrame({"region": region, "hour": hour, "video_id": vids}))
     return pd.concat(out, ignore_index=True).sort_values(["region", "hour"], kind="stable")
+
+
+def to_titles(agg: pd.DataFrame, top_pages: int) -> pd.DataFrame:
+    """Readable title for every video id that to_requests produces."""
+    out = []
+    for region, g in agg.groupby("region"):
+        ids = page_ids(g, top_pages)
+        out.append(pd.DataFrame({"region": region, "video_id": list(ids.values()),
+                                 "title": [p.replace("_", " ") for p in ids]}))
+    return pd.concat(out, ignore_index=True)
 
 
 def main(argv=None) -> None:
@@ -82,15 +98,19 @@ def main(argv=None) -> None:
     ap.add_argument("--requests-per-hour", type=int, default=2000)
     ap.add_argument("--cache-dir", type=Path, default=Path("data/raw"))
     ap.add_argument("--out", type=Path, default=Path("data/wiki_requests.csv"))
+    ap.add_argument("--titles-out", type=Path, default=Path("data/wiki_titles.csv"))
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     start = datetime.strptime(a.start, "%Y-%m-%dT%H")
     frames = [parse_hour(download_hour(start + timedelta(hours=h), a.cache_dir), h) for h in range(a.hours)]
-    req = to_requests(pd.concat(frames), a.top_pages, a.requests_per_hour, a.seed)
+    agg = pd.concat(frames)
+    req = to_requests(agg, a.top_pages, a.requests_per_hour, a.seed)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     req.to_csv(a.out, index=False)
-    print(f"wrote {len(req):,} requests to {a.out}")
+    a.titles_out.parent.mkdir(parents=True, exist_ok=True)
+    to_titles(agg, a.top_pages).to_csv(a.titles_out, index=False)
+    print(f"wrote {len(req):,} requests to {a.out} and titles to {a.titles_out}")
 
 
 if __name__ == "__main__":

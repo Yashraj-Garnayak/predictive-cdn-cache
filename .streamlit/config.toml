@@ -1,0 +1,7 @@
+# Dark base + Apple blue accent, so Streamlit's own widgets (radio, slider, inputs) match the live view.
+[theme]
+base = "dark"
+primaryColor = "#0A84FF"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#1C1C1E"
+textColor = "#F5F5F7"
