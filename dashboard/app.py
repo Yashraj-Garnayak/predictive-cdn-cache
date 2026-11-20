@@ -7,7 +7,7 @@ from pathlib import Path
 import altair as alt
 import pandas as pd
 import streamlit as st
-from pcache.data import generate_requests
+from pcache.data import generate_requests, load_requests
 from pcache.report import align, mean_abs_error, precision_at_k, top_k_table
 from pcache.simulator import POLICY_NAMES, iter_region
 
@@ -17,9 +17,16 @@ alt.data_transformers.disable_max_rows()
 st.set_page_config(page_title="Predictive CDN Cache", page_icon="📡", layout="wide")
 
 
-@st.cache_data(show_spinner="Loading request log…")
+# cache_resource shares one in-memory copy (cache_data would copy GB-sized traces on every rerun)
+@st.cache_resource(show_spinner="Loading request log…")
 def load(source: str, path: str) -> pd.DataFrame:
-    return generate_requests() if source == "Synthetic" else pd.read_csv(path)
+    return generate_requests() if source == "Synthetic" else load_requests(path)
+
+
+@st.cache_resource(show_spinner="Selecting region…")
+def load_region(source: str, path: str, region: str) -> pd.DataFrame:
+    df = load(source, path)
+    return df[df["region"] == region]
 
 
 # ---------- sidebar ----------
@@ -31,7 +38,7 @@ if source == "CSV file" and not Path(path).exists():
     st.error(f"File not found: {path}. Run `python scripts/prepare_wikipedia.py` first.")
     st.stop()
 df = load(source, path)
-region = sb.selectbox("Region", sorted(df["region"].unique()))
+region = sb.selectbox("Region", sorted(map(str, df["region"].unique())))
 capacity = sb.number_input("Cache capacity (videos)", 10, 5000, 200, step=10)
 speed = sb.slider("Playback speed (hours / second)", 0.25, 5.0, 1.0, 0.25)
 c1, c2, c3 = sb.columns(3)
@@ -46,7 +53,7 @@ if start and not state.done:
 if pause:
     state.running = False
 
-region_df = df[df["region"] == region]
+region_df = load_region(source, path, region)
 n_test = region_df["hour"].nunique() - region_df["hour"].nunique() // 2
 
 

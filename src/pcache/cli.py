@@ -3,8 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 from pathlib import Path
-import pandas as pd
-from .data import generate_requests
+from .data import generate_requests, load_requests
 from .simulator import simulate
 
 
@@ -32,7 +31,7 @@ def main(argv=None) -> None:
         generate_requests(hours=args.hours).to_csv(args.out, index=False)
         print(f"wrote {args.out}")
         return
-    df = generate_requests() if args.generate or not args.data else pd.read_csv(args.data)
+    df = generate_requests() if args.generate or not args.data else load_requests(args.data)
     if args.cmd == "simulate":
         print("Hit rate (%) on held-out hours:")
         print(simulate(df, args.capacity).to_string())

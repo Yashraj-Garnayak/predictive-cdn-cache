@@ -1,7 +1,15 @@
-"""Synthetic regional request-log generator."""
+"""Synthetic regional request-log generator and CSV loader."""
 from __future__ import annotations
 import numpy as np
 import pandas as pd
+
+# Compact dtypes: a 140M-row trace takes ~1.3 GB instead of ~4 GB
+CSV_DTYPES = {"region": "category", "hour": "int32", "video_id": "int32"}
+
+
+def load_requests(path) -> pd.DataFrame:
+    """Read a region,hour,video_id CSV (e.g. data/wiki_requests.csv) with memory-light dtypes."""
+    return pd.read_csv(path, dtype=CSV_DTYPES)
 
 
 def generate_requests(regions=("Frankfurt", "Mumbai", "Virginia"), hours=72,
