@@ -1,5 +1,6 @@
 """Synthetic regional request-log generator and CSV loader."""
 from __future__ import annotations
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -8,8 +9,14 @@ CSV_DTYPES = {"region": "category", "hour": "int32", "video_id": "int32"}
 
 
 def load_requests(path) -> pd.DataFrame:
-    """Read a region,hour,video_id CSV (e.g. data/wiki_requests.csv) with memory-light dtypes."""
-    return pd.read_csv(path, dtype=CSV_DTYPES)
+    """Read a region,hour,video_id CSV (e.g. data/wiki_requests.csv) with memory-light dtypes.
+    Raises ValueError for anything that is not such a file (a folder, wrong columns, …)."""
+    if not Path(path).is_file():
+        raise ValueError(f"{path} is not a file")
+    try:
+        return pd.read_csv(path, dtype=CSV_DTYPES, usecols=list(CSV_DTYPES))
+    except (ValueError, pd.errors.ParserError, UnicodeDecodeError) as e:
+        raise ValueError(f"{path} is not a region,hour,video_id CSV ({e})") from e
 
 
 def generate_requests(regions=("Frankfurt", "Mumbai", "Virginia"), hours=72,

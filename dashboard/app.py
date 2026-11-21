@@ -34,10 +34,15 @@ sb = st.sidebar
 sb.header("Settings")
 source = sb.radio("Data", ["Synthetic", "CSV file"])
 path = sb.text_input("CSV path", "data/wiki_requests.csv", disabled=source == "Synthetic")
-if source == "CSV file" and not Path(path).exists():
-    st.error(f"File not found: {path}. Run `python scripts/prepare_wikipedia.py` first.")
+if source == "CSV file" and not Path(path).is_file():   # a folder like 'data/' is not a file either
+    st.error(f"File not found: {path}. Run `python scripts/prepare_wikipedia.py` "
+             "or `python scripts/prepare_cachemon.py` first.")
     st.stop()
-df = load(source, path)
+try:
+    df = load(source, path)
+except ValueError as e:
+    st.error(f"Can't use this file: {e}")
+    st.stop()
 region = sb.selectbox("Region", sorted(map(str, df["region"].unique())))
 capacity = sb.number_input("Cache capacity (videos)", 10, 5000, 200, step=10)
 speed = sb.slider("Playback speed (hours / second)", 0.25, 5.0, 1.0, 0.25)
