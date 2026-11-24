@@ -69,8 +69,8 @@ To plug in a new source, see [docs/data-sources.md](docs/data-sources.md).
 
 ### Meta CDN request traces (cacheMon)
 
-Real request logs from three Meta CDN edge clusters (eag, nha, prn), 7 consecutive days,
-15–22 March 2023. Columns used: `timestamp` (ms, bucketed to hours from the trace start)
+Real request logs from three Meta CDN edge clusters (eag, nha, prn), 193 hourly buckets
+(about 8 days), 15–22 March 2023. Columns used: `timestamp` (ms, bucketed to hours from the trace start)
 and `cacheKey` (anonymised object id, mapped to an integer `video_id`). The most-requested
 objects per cluster are kept (`--top-objects`, default 20000) with **every** request to them.
 `data/cachemon_titles.csv` keeps each object's readable id (`cacheKey` without its zero
@@ -95,25 +95,23 @@ Files are streamed (never fully decompressed, ~46 GB uncompressed). On an 8 GB M
 preparing takes ~15 min (~3.8 GB peak), giving 57M requests (1.2 GB CSV); `simulate` takes
 ~9 min and `report` ~6 min (~3 GB peak each).
 
-Results (hit rate %, capacity 200, held-out hours; Hybrid with 10% reserved):
+Results (hit rate %, capacity 200, held-out hours 96-192; from `reports/baseline.csv`):
 
 | Cluster | LRU | LFU | Predictive | Hybrid | precision@10 |
 |---|---|---|---|---|---|
-| eag | 89.22 | 69.13 | 89.21 | 89.16 | 0.39 |
-| nha | 77.62 | 21.42 | 77.61 | 77.49 | 0.32 |
-| prn | 80.13 | 56.54 | 80.13 | 80.12 | 0.41 |
+| eag | 80.97 | 69.13 | 80.98 | 81.18 | 0.39 |
+| nha | 50.53 | 21.42 | 50.55 | 50.93 | 0.32 |
+| prn | 67.42 | 56.54 | 67.43 | 67.80 | 0.41 |
 
-Hybrid's reserved share, tried at 10 / 25 / 50%: eag 89.16 / 89.23 / 89.00, nha
-77.49 / 77.26 / 76.35, prn 80.12 / 80.00 / 79.55. 10% is best or within 0.1 points.
-
-**Finding: on real CDN traffic, recency wins and prediction adds almost nothing.** What gets
-requested next is overwhelmingly what was requested in the last few minutes, so plain LRU
-already holds it. LFU loses badly because it hoards objects that were popular days ago.
-Predictive and Hybrid end up within ±0.1 points of LRU: the items the model can see coming
-are already in the LRU cache, and the misses that remain are objects it cannot foresee.
-Every slot reserved for predictions is taken from the LRU part, so a larger reserved share
-only lowers the hit rate. Adding the 24-hours-ago and hour-of-day features lowered precision@10
-slightly (eag 0.46 → 0.39, nha 0.33 → 0.32, prn 0.43 → 0.41); Predictive's hit rate barely moved.
+**Finding: on real CDN traffic, recency wins and prediction adds little.** What gets
+requested next is mostly what was requested a moment ago, so plain LRU is hard to beat. LFU
+loses badly because it hoards objects that were popular days ago. Predictive stays within
+0.02 points of LRU: the items the model can see coming are already in the LRU cache. Hybrid
+(10% of the slots reserved for model picks) is ahead of LRU by 0.2-0.4 points in every
+cluster at cache size 200 (0.20-0.47 across three seeds). The model gets about 3 to 4 of its
+top 10 right (precision@10 0.32-0.41). Other cache sizes, the seed runs and a newer
+classifier that was not adopted are in
+[How it works](docs/HOW_IT_WORKS.md#7-results-and-the-honest-finding).
 
 **Source and credit:** [cacheMon/cache_dataset](https://github.com/cacheMon/cache_dataset),
 Meta CDN traces originally released via [CacheLib](https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_FB_HW_eval/),
