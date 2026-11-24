@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<title>Predictive CDN Cache</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='14' r='8' fill='%230A84FF'/%3E%3Ccircle cx='22' cy='20' r='6' fill='%2330D158'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" defer></script>
+<script src="bubbles.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="bar glass">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="14" r="8"/><circle cx="22" cy="20" r="6"/></svg>
+    <div>
+      <h1>Predictive CDN Cache</h1>
+      <p id="source" class="sub">Connecting…</p>
+    </div>
+  </div>
+  <form id="controls" class="controls" onsubmit="return false">
+    <label class="field"><span>Region</span>
+      <select id="region" required disabled><option>Loading…</option></select></label>
+    <label class="field small"><span>Capacity</span>
+      <input id="capacity" type="number" inputmode="numeric" min="10" max="5000" step="10" value="200"></label>
+    <label class="field small"><span>Speed</span>
+      <select id="speed">
+        <option value="0.5">0.5 h/s</option><option value="1" selected>1 h/s</option>
+        <option value="2">2 h/s</option><option value="5">5 h/s</option>
+      </select></label>
+    <div class="buttons">
+      <button id="start" type="button" class="btn primary">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span>Start</span></button>
+      <button id="pause" type="button" class="btn" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg><span>Pause</span></button>
+      <button id="reset" type="button" class="btn" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 1-6.6 4.7l1.9.6A5 5 0 1 0 12 7v3L7.5 6 12 2z"/></svg><span>Reset</span></button>
+      <a class="btn" id="hiw-open" href="how-it-works.html" data-hiw-step="s1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1-5h2v2h-2zm1-10a4 4 0 0 0-4 4h2a2 2 0 1 1 3.2 1.6c-.9.7-2.2 1.6-2.2 3.4h2c0-1 .6-1.5 1.4-2.1A4 4 0 0 0 12 5z"/></svg><span>How it works</span></a>
+    </div>
+  </form>
+</header>
+
+<main id="main">
+  <div id="alert" class="alert" role="alert" hidden></div>
+
+  <section class="progress glass" aria-label="Progress">
+    <div class="progress-text">
+      <span id="status" class="pill idle">Ready</span>
+      <span id="progress-label" role="status" aria-live="polite">Pick a region and press Start.</span>
+    </div>
+    <div class="track" aria-hidden="true"><div id="progress-fill"></div></div>
+  </section>
+
+  <section class="cards" aria-label="Key metrics">
+    <article class="card glass metric" style="--accent: var(--hit)">
+      <div class="title-row"><h2>Model picks that were right</h2><a class="info" href="how-it-works.html#s8" data-hiw-step="s8" aria-label="How precision@10 is measured">?</a></div>
+      <p class="value"><span id="m-precision">–</span><small> / 10</small></p>
+      <p class="delta" id="d-precision"></p>
+      <p class="hint">Of the 10 videos the model expected to be busiest this hour, how many really were in the top 10.</p>
+    </article>
+    <article class="card glass metric" style="--accent: var(--miss)">
+      <div class="title-row"><h2>Average guess error</h2><a class="info" href="how-it-works.html#s8" data-hiw-step="s8" aria-label="How the average error is measured">?</a></div>
+      <p class="value"><span id="m-mae">–</span><small> views</small></p>
+      <p class="delta" id="d-mae"></p>
+      <p class="hint">How far each video's predicted views were from the real number, on average. Lower is better.</p>
+    </article>
+    <article class="card glass metric" style="--accent: var(--hybrid)">
+      <div class="title-row"><h2>Hybrid's lead over LFU</h2><a class="info" href="how-it-works.html#s6" data-hiw-step="s6" aria-label="How Hybrid and LFU work">?</a></div>
+      <p class="value"><span id="m-lead">–</span><small> pts</small></p>
+      <p class="delta" id="d-lead"></p>
+      <p class="hint">Percentage points more requests Hybrid served from cache than plain LFU, since testing began.</p>
+    </article>
+    <article class="card glass metric" style="--accent: var(--hybrid)">
+      <div class="title-row"><h2>Hybrid hit rate</h2><a class="info" href="how-it-works.html#s8" data-hiw-step="s8" aria-label="How hit rate is measured">?</a></div>
+      <p class="value"><span id="m-hybrid">–</span><small>%</small></p>
+      <p class="delta" id="d-hybrid"></p>
+      <p class="hint">Share of all requests in the test hours that Hybrid served straight from the cache.</p>
+    </article>
+  </section>
+
+  <section class="card glass chart-card" aria-labelledby="chart-title">
+    <div class="card-head">
+      <div>
+        <div class="title-row"><h2 id="chart-title">Running hit rate per policy</h2><a class="info" href="how-it-works.html#s7" data-hiw-step="s7" aria-label="How the hourly replay works">?</a></div>
+        <p class="sub">Share of requests served from cache since the test hours began</p>
+      </div>
+      <ul id="legend" class="legend" aria-label="Policies"></ul>
+    </div>
+    <div id="chart" class="chart" role="img" aria-label="Line chart of hit rate per policy. No data yet."></div>
+  </section>
+
+  <div class="split">
+    <section class="card glass" aria-labelledby="bubbles-title">
+      <div class="card-head">
+        <div>
+          <div class="title-row"><h2 id="bubbles-title">Trending now</h2><a class="info" href="how-it-works.html#s4" data-hiw-step="s4" aria-label="How the model predicts busy videos">?</a></div>
+          <p class="sub">This hour's 20 busiest videos. Size = requests. Drag or flick them.</p>
+        </div>
+        <ul class="legend">
+          <li><i class="dot" style="background: var(--hit)"></i>Model predicted it</li>
+          <li><i class="dot" style="background: var(--miss)"></i>Model missed it</li>
+        </ul>
+      </div>
+      <div id="stage" class="stage" aria-hidden="true">
+        <div class="aurora"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div><div class="blob d"></div></div>
+        <div class="grain"></div><div class="vignette"></div>
+        <div id="empty">Waiting for the first hour…</div>
+        <div id="tip"></div>
+      </div>
+    </section>
+
+    <section class="card glass" aria-labelledby="table-title">
+      <div class="card-head">
+        <div>
+          <div class="title-row"><h2 id="table-title">Top 10: predicted vs actual</h2><a class="info" href="how-it-works.html#s8" data-hiw-step="s8" aria-label="How the top 10 are compared">?</a></div>
+          <p class="sub" id="table-sub">Green tick = the video is in both lists</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="top10">
+          <thead><tr><th scope="col">#</th><th scope="col">Model predicted</th><th scope="col">Actually requested</th></tr></thead>
+          <tbody><tr><td colspan="3" class="empty-row">No hour simulated yet.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- "How it works" overlay: the explainer page in a frame, loaded the first time it opens (app.js) -->
+<dialog id="hiw" class="hiw" aria-label="How it works">
+  <div class="hiw-panel glass">
+    <div class="hiw-bar">
+      <p>How it works</p>
+      <button id="hiw-close" type="button" class="btn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 7.1 16.9 5.7 12 10.6 7.1 5.7 5.7 7.1l4.9 4.9-4.9 4.9 1.4 1.4 4.9-4.9 4.9 4.9 1.4-1.4-4.9-4.9z"/></svg><span>Close</span></button>
+    </div>
+    <iframe id="hiw-frame" title="How it works: 10-step explainer"></iframe>
+  </div>
+</dialog>
+<div id="hiw-hint" class="hiw-hint glass" role="status" hidden>
+  <span>New here?</span> <a href="how-it-works.html" data-hiw-step="s1">See how it works</a>
+  <button type="button" id="hiw-hint-close" aria-label="Dismiss">×</button>
+</div>
+</body>
+</html>

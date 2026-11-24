@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import pandas as pd
-from matplotlib.figure import Figure
 from .simulator import POLICY_NAMES, iter_region
 
 log = logging.getLogger(__name__)
@@ -64,6 +63,7 @@ def region_results(df: pd.DataFrame, capacity: int, k: int = 10) -> dict:
 
 
 def plot_hit_rate(hourly: pd.DataFrame, region: str, path: Path) -> None:
+    from matplotlib.figure import Figure  # only reports need matplotlib; the API image leaves it out
     fig = Figure(figsize=(10, 4.5))
     ax = fig.subplots()
     for name in POLICY_NAMES:
@@ -79,6 +79,7 @@ def plot_hit_rate(hourly: pd.DataFrame, region: str, path: Path) -> None:
 
 
 def plot_pred_vs_actual(scatter: pd.DataFrame, region: str, path: Path) -> None:
+    from matplotlib.figure import Figure  # only reports need matplotlib; the API image leaves it out
     fig = Figure(figsize=(5.5, 5.5))
     ax = fig.subplots()
     ax.scatter(scatter["actual"], scatter["predicted"], s=4, alpha=0.25)

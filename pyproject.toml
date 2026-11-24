@@ -6,14 +6,18 @@ build-backend = "setuptools.build_meta"
 name = "predictive-cdn-cache"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = ["numpy", "pandas", "scikit-learn", "matplotlib", "streamlit",
-                "zstandard; python_version < '3.14'"]
+dependencies = ["numpy", "pandas", "scikit-learn", "psycopg[binary]", "fastapi", "uvicorn", "websockets"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+report = ["matplotlib"]                                  # pcache report (PNG charts)
+prep = ["zstandard; python_version < '3.14'"]            # scripts/prepare_cachemon.py
+dev = ["pytest", "httpx", "matplotlib", "zstandard; python_version < '3.14'"]
 
 [project.scripts]
 pcache = "pcache.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]   # makes the api/ package importable in tests

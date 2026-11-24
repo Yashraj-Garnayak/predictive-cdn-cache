@@ -1,0 +1,11 @@
+data/
+.venv/
+.git/
+reports/
+__pycache__/
+*.log
+.env
+tests/
+scripts/
+*.egg-info/
+.DS_Store

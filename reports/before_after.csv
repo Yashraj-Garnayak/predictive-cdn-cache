@@ -1,0 +1,10 @@
+region,capacity,LRU_hit,LFU_hit,old_Hybrid_hit,new_Hybrid_hit,LRU_byte,LFU_byte,old_Hybrid_byte,new_Hybrid_byte,old_model_precision@10,new_model_hit_precision@10,model,new_minus_LRU
+CDN-edge-eag,200,80.966,69.134,81.182,81.607,84.849,38.069,84.83,83.515,0.39,0.995,models/CDN-edge-eag/v1,0.641
+CDN-edge-nha,200,50.533,21.419,50.932,50.359,74.475,35.122,74.243,71.806,0.322,0.972,models/CDN-edge-nha/v1,-0.174
+CDN-edge-prn,200,67.417,56.538,67.797,68.049,62.092,18.306,61.612,59.116,0.407,0.993,models/CDN-edge-prn/v1,0.632
+CDN-edge-eag,50,71.523,61.906,71.931,72.013,62.512,11.115,61.989,59.882,0.39,0.997,models/CDN-edge-eag/v2,0.49
+CDN-edge-nha,50,30.457,11.611,31.296,31.79,46.861,14.144,47.91,45.291,0.322,0.972,models/CDN-edge-nha/v2,1.333
+CDN-edge-prn,50,56.907,50.342,57.578,57.688,30.961,3.084,30.096,27.857,0.407,0.987,models/CDN-edge-prn/v2,0.781
+CDN-edge-eag,1000,92.076,77.965,92.1,92.383,97.747,64.474,97.707,97.463,0.39,0.991,models/CDN-edge-eag/v3,0.307
+CDN-edge-nha,1000,75.198,39.004,75.242,75.211,93.855,57.22,93.752,92.853,0.322,0.989,models/CDN-edge-nha/v3,0.013
+CDN-edge-prn,1000,81.978,66.994,82.067,82.773,89.848,41.623,89.779,89.048,0.407,0.991,models/CDN-edge-prn/v3,0.796

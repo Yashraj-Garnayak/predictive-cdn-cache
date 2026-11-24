@@ -17,11 +17,10 @@ class PopularityModel:
         return self
 
     def predict(self, counts: pd.DataFrame, hour: int) -> pd.Series:
-        """Predicted request count at `hour` for every video seen in the previous 6 hours."""
+        """Predicted request count at `hour` for every candidate video (see build_features)."""
         if not self.fitted:
             raise RuntimeError("model not fitted")
         f = build_features(counts, hour)
-        f = f[f.sum(axis=1) > 0]
         if f.empty:
             return pd.Series(dtype=float)
         return pd.Series(self.model.predict(f[FEATURES]), index=f.index)

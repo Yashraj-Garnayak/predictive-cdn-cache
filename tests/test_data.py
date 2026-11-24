@@ -16,5 +16,11 @@ def test_load_requests_rejects_folder_and_wrong_csv(tmp_path):
         load_requests(tmp_path)
     titles = tmp_path / "cachemon_titles.csv"
     pd.DataFrame({"region": ["A"], "video_id": [1], "title": ["0067"]}).to_csv(titles, index=False)
-    with pytest.raises(ValueError, match="not a region,hour,video_id CSV"):
+    with pytest.raises(ValueError, match="needs columns region,hour,video_id"):
         load_requests(titles)
+
+
+def test_load_requests_keeps_hourly_counts(tmp_path):
+    f = tmp_path / "hourly.csv"
+    pd.DataFrame({"region": ["A"], "hour": [0], "video_id": [5], "requests": [40]}).to_csv(f, index=False)
+    assert load_requests(f)["requests"].tolist() == [40]
